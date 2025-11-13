@@ -1,0 +1,25 @@
+Branching
+----------------------------------
+
+git checkout -b <branchName>
+
+----------------------------------
+
+Fixing a merge conflict:
+
+git checkout main
+git pull origin main
+git checkout <conflictingBranchsName>
+git merge main
+
+if shows conflicts
+
+>>> edit the files and then
+
+git add .
+git commit -m "resolve message"
+git push origin <branchName>
+
+>>> in github merge PR
+
+----------------------------------
