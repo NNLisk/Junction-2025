@@ -1,10 +1,9 @@
-Branching
 ----------------------------------
+Branching
 
 git checkout -b <branchName>
 
 ----------------------------------
-
 Fixing a merge conflict:
 
 git checkout main
