@@ -1,24 +1,24 @@
 # Logs
-logs
-*.log
-npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
-pnpm-debug.log*
-lerna-debug.log*
+tauriAppDemo/logs
+tauriAppDemo/*.log
+tauriAppDemo/npm-debug.log*
+tauriAppDemo/yarn-debug.log*
+tauriAppDemo/yarn-error.log*
+tauriAppDemo/pnpm-debug.log*
+tauriAppDemo/lerna-debug.log*
 
-node_modules
-dist
-dist-ssr
-*.local
+tauriAppDemo/node_modules
+tauriAppDemo/dist
+tauriAppDemo/dist-ssr
+tauriAppDemo/*.local
 
 # Editor directories and files
-.vscode/*
-!.vscode/extensions.json
-.idea
-.DS_Store
-*.suo
-*.ntvs*
-*.njsproj
-*.sln
-*.sw?
+tauriAppDemo/.vscode/*
+tauriAppDemo/!.vscode/extensions.json
+tauriAppDemo/.idea
+tauriAppDemo/.DS_Store
+tauriAppDemo/*.suo
+tauriAppDemo/*.ntvs*
+tauriAppDemo/*.njsproj
+tauriAppDemo/*.sln
+tauriAppDemo/*.sw?
