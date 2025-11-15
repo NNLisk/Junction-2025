@@ -12,3 +12,19 @@ pub fn run() {
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
 }
+
+#[tauri::command]
+fn load_data() {
+    // Placeholder for data loading logic
+}
+
+#[tauri::command]
+fn request_software_info(software_name: &str) {
+    // Placeholder for requesting software information logic
+}
+
+#[tauri::command]
+fn update_software_clearance(software_name: &str, clearance: bool) {
+    // Placeholder for updating software clearance logic
+}
+
