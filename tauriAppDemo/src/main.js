@@ -1,12 +1,13 @@
+// Store all data globally for filtering
+let allData = [];
+
 async function loadCSV() {
-  
   const response = await fetch("/assets/WithSecure_sample_data.csv");
   const text = await response.text();
 
   const rows = text.trim().split(/\n+/);
 
   const data = rows.slice(1).map(line => {
-    
     const parts = line.match(/\".*?\"|[^,]+/g).map(v => v.replace(/^\"|\"$/g, ""));
     return {
       company: parts[0],
@@ -15,23 +16,19 @@ async function loadCSV() {
     };
   });
 
+  allData = data; // FIX 1: Store data globally
   renderList(data);
+  updateSearchStats(data.length, data.length); // FIX 2: Initialize stats
 }
-
-// Store all data globally for filtering
-let allData = [];
-
 
 function fuzzySearch(query, text) {
   query = query.toLowerCase();
   text = text.toLowerCase();
   
-
   if (text.includes(query)) {
     return { match: true, score: 100 };
   }
   
-  // Fuzzy matching - check if all characters appear in order
   let queryIndex = 0;
   let matchedIndices = [];
   
@@ -43,7 +40,6 @@ function fuzzySearch(query, text) {
   }
   
   if (queryIndex === query.length) {
-    // Calculate score based on how close together the matches are
     let score = 50;
     if (matchedIndices.length > 1) {
       const avgDistance = matchedIndices[matchedIndices.length - 1] / matchedIndices.length;
@@ -55,13 +51,11 @@ function fuzzySearch(query, text) {
   return { match: false, score: 0 };
 }
 
-// Highlight matched characters
 function highlightMatch(text, query) {
   if (!query) return text;
   
   const lowerText = text.toLowerCase();
   const lowerQuery = query.toLowerCase();
-  
   
   const index = lowerText.indexOf(lowerQuery);
   if (index !== -1) {
@@ -75,7 +69,6 @@ function highlightMatch(text, query) {
   return text;
 }
 
-// Filter and render based on search
 function filterData(query) {
   if (!query.trim()) {
     renderList(allData);
@@ -104,29 +97,25 @@ function filterData(query) {
 
 function updateSearchStats(showing, total) {
   const stats = document.getElementById('searchStats');
-  if (showing === total) {
-    stats.textContent = `Showing all ${total} products`;
-  } else {
-    stats.textContent = `Showing ${showing} of ${total} products`;
+  if (stats) { // FIX 3: Check if element exists
+    if (showing === total) {
+      stats.textContent = `Showing all ${total} products`;
+    } else {
+      stats.textContent = `Showing ${showing} of ${total} products`;
+    }
   }
 }
 
 
-const searchInput = document.getElementById('searchInput');
-searchInput.addEventListener('input', (e) => {
-  filterData(e.target.value);
-});
-
-
-function loadSampleData() {
-  const sampleData = [ /* your data */ ];
-  allData = sampleData; // IMPORTANT: Store globally
-  renderList(sampleData);
-  updateSearchStats(sampleData.length, sampleData.length);
-}
-
-function renderList(data) {
+function renderList(data, query = '') {
   const list = document.getElementById("list");
+  list.innerHTML = ''; // IMPORTANT: Clear existing items
+
+  // FIX 5: Show message when no results
+  if (data.length === 0) {
+    list.innerHTML = '<div style="text-align: center; padding: 40px; color: #7f8c8d;">No products found.</div>';
+    return;
+  }
 
   data.forEach((item, index) => {
     const container = document.createElement("div");
@@ -134,83 +123,92 @@ function renderList(data) {
 
     const title = document.createElement("div");
     title.className = "title";
-    title.innerHTML = `${item.product} <span>▼</span>`;
+    // FIX 6: Show both product and vendor with highlighting
+    title.innerHTML = `
+       <div class="title-content">
+    <div class="product-name">${highlightMatch(item.product, query)}</div>
+      <div class="vendor-name">${highlightMatch(item.company, query)}</div>
+      <div style="font-size: 12px; color: #95a5a6; margin-top: 2px;">${item.sha1}</div>
+  
+  </div>
+      <span>▼</span>
+    `;
 
     const drawer = document.createElement("div");
     drawer.className = "drawer";
     drawer.innerHTML = `
       <div class="metadata">
-            <div class="metadata-item">
-              <span class="metadata-label">SHA1:</span>
-              <span class="metadata-value">${item.sha1}</span>
-            </div>
-          </div>
+        <div class="metadata-item">
+          <span class="metadata-label">SHA1:</span>
+          <span class="metadata-value">${item.sha1}</span>
+        </div>
+      </div>
 
-          <div class="section">
-            <div class="section-title">Description</div>
-            <div class="section-content">No description available</div>
-          </div>
+      <div class="section">
+        <div class="section-title">Description</div>
+        <div class="section-content">No description available</div>
+      </div>
 
-          <div class="section">
-            <div class="section-title">Usage</div>
-            <div class="section-content">No usage information available</div>
-          </div>
+      <div class="section">
+        <div class="section-title">Usage</div>
+        <div class="section-content">No usage information available</div>
+      </div>
 
-          <div class="section">
-            <div class="section-title">Vendor Reputation</div>
-            <div class="section-content">No reputation data available</div>
-          </div>
+      <div class="section">
+        <div class="section-title">Vendor Reputation</div>
+        <div class="section-content">No reputation data available</div>
+      </div>
 
-          <div class="section">
-            <div class="section-title">CVE Trend Summary</div>
-            <div class="section-content">No CVE data available</div>
-          </div>
+      <div class="section">
+        <div class="section-title">CVE Trend Summary</div>
+        <div class="section-content">No CVE data available</div>
+      </div>
 
-          <div class="section">
-            <div class="section-title">Incidents/Abuse Signals</div>
-            <div class="section-content">No incident data available</div>
-          </div>
+      <div class="section">
+        <div class="section-title">Incidents/Abuse Signals</div>
+        <div class="section-content">No incident data available</div>
+      </div>
 
-          <div class="section">
-            <div class="section-title">Data Handling/Compliance</div>
-            <div class="section-content">No compliance information available</div>
-          </div>
+      <div class="section">
+        <div class="section-title">Data Handling/Compliance</div>
+        <div class="section-content">No compliance information available</div>
+      </div>
 
-          <div class="section">
-            <div class="section-title">Deployment/Admin Controls</div>
-            <div class="section-content">No deployment information available</div>
-          </div>
+      <div class="section">
+        <div class="section-title">Deployment/Admin Controls</div>
+        <div class="section-content">No deployment information available</div>
+      </div>
 
-          <div class="section">
-            <div class="section-title">Trust/Risk Score</div>
-            <div class="trust-score">
-              <div class="score-bar">
-                <div class="score-fill" style="width: 0%"></div>
-              </div>
-              <div class="score-value">--/100</div>
-            </div>
-            <div class="section-content" style="margin-top: 8px">No score calculated yet</div>
-            <div class="metadata" style="margin-top: 8px">
-              <div class="metadata-item">
-                <span class="metadata-label">Confidence:</span>
-                <span class="metadata-value">--</span>
-              </div>
-            </div>
+      <div class="section">
+        <div class="section-title">Trust/Risk Score</div>
+        <div class="trust-score">
+          <div class="score-bar">
+            <div class="score-fill" style="width: 0%"></div>
           </div>
+          <div class="score-value">--/100</div>
+        </div>
+        <div class="section-content" style="margin-top: 8px">No score calculated yet</div>
+        <div class="metadata" style="margin-top: 8px">
+          <div class="metadata-item">
+            <span class="metadata-label">Confidence:</span>
+            <span class="metadata-value">--</span>
+          </div>
+        </div>
+      </div>
 
-          <div class="section">
-            <div class="section-title">Safer Alternatives</div>
-            <div class="alternatives">
-              <div class="alternative-item">
-                <div class="alternative-name">Alternative 1</div>
-                <div class="alternative-rationale">No alternatives identified yet</div>
-              </div>
-              <div class="alternative-item">
-                <div class="alternative-name">Alternative 2</div>
-                <div class="alternative-rationale">No alternatives identified yet</div>
-              </div>
-            </div>
+      <div class="section">
+        <div class="section-title">Safer Alternatives</div>
+        <div class="alternatives">
+          <div class="alternative-item">
+            <div class="alternative-name">Alternative 1</div>
+            <div class="alternative-rationale">No alternatives identified yet</div>
           </div>
+          <div class="alternative-item">
+            <div class="alternative-name">Alternative 2</div>
+            <div class="alternative-rationale">No alternatives identified yet</div>
+          </div>
+        </div>
+      </div>
     `;
 
     title.addEventListener("click", () => {
@@ -225,5 +223,13 @@ function renderList(data) {
   });
 }
 
-
+// FIX 7: Wait for DOM to load before setting up listeners
 loadCSV();
+
+// Set up search input listener after DOM is ready
+const searchInput = document.getElementById('searchInput');
+if (searchInput) {
+  searchInput.addEventListener('input', (e) => {
+    filterData(e.target.value);
+  });
+}
