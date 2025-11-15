@@ -72,3 +72,35 @@ fn get_all_entries(conn: &Connection) -> Result<Vec<Software>> {
     Ok(softwares)
 }
 
+fn addToDatabase(conn: &Connection, software: &Software) -> Result<()> {
+    conn.execute(
+        "INSERT INTO software (name, clearance, description, vendor_reputation, 
+                               cve_history, incidents, datahandling_and_compliance, 
+                               trust_score, confidence_rating, alternative) 
+         VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10)",
+        params![
+            software.name,
+            software.clearance,
+            software.description,
+            software.vendor_reputation,
+            software.cve_history,
+            software.incidents,
+            software.datahandling_and_compliance,
+            software.trust_score,
+            software.confidence_rating,
+            software.alternative
+        ],
+    )?;
+    Ok(())
+}
+
+fn updateSoftwareClearance(conn: &Connection, software_name: &str, clearance: bool) -> Result<()> {
+    conn.execute(
+        "UPDATE software SET clearance = ?1 WHERE name = ?2",
+        params![clearance, software_name],
+    )?;
+    Ok(())
+}
+
+
+
