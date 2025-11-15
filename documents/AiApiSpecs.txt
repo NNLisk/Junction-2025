@@ -28,17 +28,18 @@ optionally URL: string,
 
 AI Prompt Code:
 
-use async_openai::{
-    config::Config,
-    types::{
-        ChatCompletionRequestMessage, ChatCompletionRequestSystemMessageArgs,
-        ChatCompletionRequestUserMessageArgs, CreateChatCompletionRequestArgs,
-    },
-    Client,
-};
-use serde::{Deserialize, Serialize};
+Cargoon
 
-// Response struct that matches what OpenAI returns
+Lisää [dependencies]:
+
+reqwest = { version = "0.11", features = ["json", "rustls-tls"] }
+
+Manageriin:
+use reqwest::Client;
+use serde::{Deserialize, Serialize};
+use serde_json::json;
+
+/// Response struct your app uses internally
 #[derive(Debug, Serialize, Deserialize)]
 pub struct SoftwareAnalysis {
     pub name: String,
@@ -70,6 +71,7 @@ impl SoftwareAnalysis {
     }
 }
 
+/// Request struct used by lib.rs
 pub struct OpenAIRequest {
     pub sw_name: String,
     pub sw_url: Option<String>,
@@ -91,107 +93,173 @@ impl OpenAIRequest {
     }
 }
 
-// The real implementation
+/// Call OpenAI Responses API with web_search and map the result into SoftwareAnalysis.
+///
+/// From lib.rs you already call:
+///   let response = open_ai_manager::fetch_software_info(&request, &key).await?;
+///
+/// This keeps that API but internally the LLM output is a single semicolon-separated line.
 pub async fn fetch_software_info(
     request: &OpenAIRequest,
     api_key: &str,
 ) -> Result<SoftwareAnalysis, String> {
-    // Configure OpenAI client
-    let config = Config::new().with_api_key(api_key.to_string());
-    let client = Client::with_config(config);
+    let client = Client::new();
 
-    // System prompt: your CISO/security-assessor role
-    let system_prompt = r#"
+    // System instructions: what the model should do and how to format output
+    let system_instructions = r#"
 You are an expert security analyst and CISO advisor specializing in rapid software security assessments.
-Your role is to evaluate software products and provide actionable, source-grounded security intelligence.
 
-Core Responsibilities:
-1. Gather information from TRUSTED sources only
-2. Distinguish between vendor-stated claims and independent verification
-3. Provide accurate CVE analysis with trend assessment
-4. Evaluate compliance posture and data handling practices
-5. Generate defensible trust scores with clear rationale
-6. Suggest safer alternatives when appropriate
+Use live, up-to-date information via web search to assess the security posture of the given software.
 
-Source Prioritization (in order):
-- PSIRT / Vendor Security Page
-- CISA KEV (Known Exploited Vulnerabilities catalog)
-- CERT/CSIRT advisories (e.g., US-CERT, NCSC, vendor CERTs)
-- NVD/MITRE CVE databases with CVSS scores
-- SOC 2 Type II reports and ISO 27001+ certifications
-- Terms of Service, DPA, Privacy Policy, security whitepapers
-- Public breach notifications and incident disclosures
+Prioritize these sources in your reasoning:
+- PSIRT / vendor security or trust pages
+- Terms of Service, Data Processing Agreements, Privacy Policies
+- SOC 2 Type II and ISO 27001/27017/27018/27701 certifications
+- CERT / CSIRT advisories
+- CISA Known Exploited Vulnerabilities catalog
+- CVE databases (NVD / MITRE) and CVSS scores
 
-Analysis principles:
-- Evidence-based only
-- If evidence is missing, say so explicitly in the relevant fields
-- Prefer information from the last 12–24 months for trends
+Analysis rules:
+- Be evidence-based; do NOT invent facts.
+- When you cannot find reliable evidence for a topic, use the phrase: “Insufficient public evidence”.
+- Distinguish between vendor-stated claims and independent sources in wording when relevant.
+- Focus on the last 12–24 months for CVE/incident trends where possible.
 
-You MUST output ONLY a single JSON object with this exact structure (no markdown, no extra text):
+Output format:
+Return EXACTLY ONE LINE, with fields in this order, separated by semicolons:
 
-{
-  "name": string,
-  "clearance": boolean,
-  "description": string,
-  "vendor_reputation": string,
-  "cve_history": string,
-  "incidents": string,
-  "datahandling_and_compliance": string,
-  "trust_score": integer (0-100),
-  "confidence_rating": integer (0-100),
-  "alternative": string
-}
+description; vendor_reputation; cve_history; incidents; datahandling_and_compliance; trust_score_0_to_100; confidence_0_to_100; safer_alternatives;
 
-Do not include comments. Do not wrap in backticks. JSON only.
+Rules:
+- No line breaks inside fields.
+- No extra text before or after the line.
+- No JSON, no markdown.
 "#;
 
-    // User prompt: software name + optional URL
-    let user_prompt = format!(
-        "Assess the security posture of the following software:\n\nName: {}\nURL: {}\n\nIf URL is 'None', infer the vendor and product from the name alone.",
+    // Build user input from your current request type
+    let user_input = format!(
+        "software_name: {}\nsoftware_url: {}\n\nGenerate the semicolon-separated assessment line as specified.",
         request.sw_name,
-        request.sw_url.clone().unwrap_or_else(|| "None".to_string())
+        request.sw_url.clone().unwrap_or_else(|| "Unknown".to_string())
     );
 
-    // Build messages
-    let system_message: ChatCompletionRequestMessage =
-        ChatCompletionRequestSystemMessageArgs::default()
-            .content(system_prompt)
-            .build()
-            .map_err(|e| e.to_string())?
-            .into();
+    // Build the Responses API payload with web_search enabled
+    let body = json!({
+        "model": "gpt-4.1",
+        "tools": [
+            { "type": "web_search_preview" }
+        ],
+        "input": [
+            {
+                "role": "system",
+                "content": system_instructions
+            },
+            {
+                "role": "user",
+                "content": user_input
+            }
+        ]
+    });
 
-    let user_message: ChatCompletionRequestMessage =
-        ChatCompletionRequestUserMessageArgs::default()
-            .content(user_prompt)
-            .build()
-            .map_err(|e| e.to_string())?
-            .into();
-
-    // Build chat completion request
-    let chat_request = CreateChatCompletionRequestArgs::default()
-        .model("gpt-4.1-mini") // or "gpt-4.1"
-        .messages(vec![system_message, user_message])
-        .temperature(0.0)
-        .build()
-        .map_err(|e| e.to_string())?;
-
-    // Call OpenAI
-    let response = client
-        .chat()
-        .create(chat_request)
+    // Call /v1/responses
+    let res = client
+        .post("https://api.openai.com/v1/responses")
+        .bearer_auth(api_key)
+        .json(&body)
+        .send()
         .await
-        .map_err(|e| e.to_string())?;
+        .map_err(|e| format!("HTTP error: {e}"))?
+        .error_for_status()
+        .map_err(|e| format!("API status error: {e}"))?;
 
-    // Extract content (the JSON string)
-    let content = response
-        .choices
-        .get(0)
-        .and_then(|c| c.message.content.clone())
-        .ok_or_else(|| "No content returned from OpenAI".to_string())?;
+    let json: serde_json::Value = res
+        .json()
+        .await
+        .map_err(|e| format!("JSON decode error: {e}"))?;
 
-    // Parse JSON into SoftwareAnalysis
-    let analysis: SoftwareAnalysis =
-        serde_json::from_str(&content).map_err(|e| format!("JSON parse error: {e}\nRaw: {content}"))?;
+    // Extract the assistant's text from the Responses API format:
+    // response.output is an array; find the "message" item and then its "output_text"
+    let output_items = json["output"]
+        .as_array()
+        .ok_or_else(|| "Missing 'output' array in Responses result".to_string())?;
+
+    let mut line: Option<String> = None;
+
+    for item in output_items {
+        if item["type"] == "message" {
+            if let Some(content_arr) = item["content"].as_array() {
+                for c in content_arr {
+                    if c["type"] == "output_text" {
+                        if let Some(text) = c["text"].as_str() {
+                            line = Some(text.trim().to_string());
+                            break;
+                        }
+                    }
+                }
+            }
+        }
+        if line.is_some() {
+            break;
+        }
+    }
+
+    let line = match line {
+        Some(l) => l,
+        None => {
+            // Fall back to dummy if no usable output
+            return Ok(SoftwareAnalysis::dummy(request.sw_name.clone()));
+        }
+    };
+
+    // Now parse the semicolon-separated line into fields
+    let parts: Vec<String> = line
+        .split(';')
+        .map(|s| s.trim().to_string())
+        .filter(|s| !s.is_empty())
+        .collect();
+
+    // We expect 8 fields based on the system_instructions
+    if parts.len() < 8 {
+        // If parsing fails, fall back to dummy
+        return Ok(SoftwareAnalysis::dummy(request.sw_name.clone()));
+    }
+
+    let description = parts[0].clone();
+    let vendor_reputation = parts[1].clone();
+    let cve_history = parts[2].clone();
+    let incidents = parts[3].clone();
+    let datahandling_and_compliance = parts[4].clone();
+
+    // Try to parse trust_score and confidence; default if parsing fails
+    let trust_score: i32 = parts[5]
+        .split_whitespace()
+        .next()
+        .and_then(|num| num.parse::<i32>().ok())
+        .unwrap_or(50);
+
+    let confidence_rating: i32 = parts[6]
+        .split_whitespace()
+        .next()
+        .and_then(|num| num.parse::<i32>().ok())
+        .unwrap_or(50);
+
+    let alternative = parts[7].clone();
+
+    // Simple clearance heuristic: trust_score >= 70 => true, else false
+    let clearance = trust_score >= 70;
+
+    let analysis = SoftwareAnalysis {
+        name: request.sw_name.clone(),
+        clearance,
+        description,
+        vendor_reputation,
+        cve_history,
+        incidents,
+        datahandling_and_compliance,
+        trust_score,
+        confidence_rating,
+        alternative,
+    };
 
     Ok(analysis)
 }
