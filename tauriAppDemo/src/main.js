@@ -20,7 +20,31 @@ window.addEventListener("DOMContentLoaded", () => {
 */
 
 // Store all data globally for filtering
+
+/*const { invoke } = window.__TAURI__.tauri;
 let allData = [];
+
+async function fetchNewData(sw_name, productName) {
+  try {
+    console.log(`Fetching alternative ${sw_name} for ${productName}...`);
+    
+    
+    const result = await invoke('request_software_info', {
+      sw_name: productName,
+      url: alternativeNumber//add function if theres url
+    });
+    
+    console.log('Received data:', result);
+     const db_csv = await invoke('load_all', {
+      
+    });
+    alert(`Received: ${JSON.stringify(result)}`);
+    
+  } catch (error) {
+    console.error('Error fetching alternative:', error);
+    alert(`Error: ${error}`);
+  }
+}*/
 
 async function loadCSV() {
   const response = await fetch("/assets/WithSecure_sample_data.csv");
@@ -156,7 +180,7 @@ function renderList(data, query = '') {
       <div style="font-size: 12px; color: #95a5a6; margin-top: 2px;">${item.sha1}</div>
   
   </div>
-      <span>▼</span>
+      <span class="arrow">▼</span>
     `;
 
     const drawer = document.createElement("div");
@@ -218,7 +242,7 @@ function renderList(data, query = '') {
         </div>
       </div>
 
-      <div class="section">
+       <div class="section">
     <div class="section-title">Safer Alternatives</div>
     <div class="alternatives">
       ${hasAlternatives ? 
@@ -226,7 +250,7 @@ function renderList(data, query = '') {
           <div class="alternative-item">
             <div class="alternative-name">${alt.name}</div>
             <div class="alternative-rationale">${alt.rationale}</div>
-            <button class="fetch-button" onclick="fetchAlternative(${idx + 1}, '${item.product}')">Fetch Software</button>
+            <button class="fetch-button" onclick="fetchNewData()(${idx + 1}, '${item.product}')">Fetch Software</button>
           </div>
         `).join('') 
         : 
@@ -246,10 +270,10 @@ function renderList(data, query = '') {
 `;
 
     title.addEventListener("click", () => {
-      const open = drawer.style.display === "block";
-      drawer.style.display = open ? "none" : "block";
-      title.querySelector("span").textContent = open ? "▼" : "▲";
-    });
+  const open = drawer.style.display === "block";
+  drawer.style.display = open ? "none" : "block";
+  title.querySelector("span.arrow").textContent = open ? "▼" : "▲";
+  });
 
     container.appendChild(title);
     container.appendChild(drawer);
@@ -267,3 +291,4 @@ if (searchInput) {
     filterData(e.target.value);
   });
 }
+
