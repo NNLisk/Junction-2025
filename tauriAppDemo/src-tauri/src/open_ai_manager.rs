@@ -61,7 +61,7 @@ impl OpenAIRequest {
     }
 }
 
-pub fn fetch_software_info(request: &OpenAIRequest, api_key: &str) -> Result<SoftwareAnalysis, String> {
+pub async fn fetch_software_info(request: &OpenAIRequest, api_key: &str) -> Result<SoftwareAnalysis, String> {
 
     Ok(SoftwareAnalysis::dummy(request.sw_name.clone()))
 } 

@@ -39,7 +39,7 @@ fn load_data(db: State<DbConnection>) -> Result<Vec<database::Software>, String>
 }
 
 #[tauri::command]
-fn request_software_info(
+async fn request_software_info(
     sw_name: String,
     url: Option<String>,
     db: State<'_, DbConnection>,
@@ -50,9 +50,11 @@ fn request_software_info(
         request = request.with_url(url);
     }
 
-    let key = api_key.0.lock().expect("Failed to acquire API key lock");
-    // let api_key = api_key.0.lock().expect("Failed to acquire API key lock");
-    let response = open_ai_manager::fetch_software_info(&request, &key)?;
+    let key = {
+        let key_guard = api_key.0.lock().expect("Failed to acquire API key lock");
+        key_guard.clone()  // Clone the String
+    };  
+    let response = open_ai_manager::fetch_software_info(&request, &key).await?;
 
     let software = database::Software {
         name: response.name,
