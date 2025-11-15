@@ -1,0 +1,27 @@
+
+function call 
+FROM lib.rs TO lib.rs
+
+### PUT into API call ###
+softwarename: string,
+optionally URL: string,
+
+### API call returns ###
+
+- Vendor reputation
+- CVE history + trends
+- Incidents / abuse signals
+- Data handling + compliance
+- Deployment + admin controls
+- 0–100 trust/risk score with rationale
+- Confidence rating
+- Suggest 1–2 safer alternatives with short rationales.
+
+### make sure AI prioritizes sources like: ###
+
+- PSRIT
+- Terms of service/data processing agreement
+- Systems and organization controls type II
+- ISO attestations
+- Reputable advisories/CERTS
+- CISA known exploited vulnerabilities catalog
