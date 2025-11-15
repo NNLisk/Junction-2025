@@ -17,6 +17,82 @@
       color: #34495e;
       font-size: 28px;
     }
+    .header-card {
+  max-width: 900px;
+  margin: 0 auto 30px;
+  background: white;
+  padding: 30px;
+  border-radius: 8px;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.08);
+  border-bottom: 3px solid #000;
+}
+
+.header-card h1 {
+  text-align: center;
+  color: #34495e;
+  font-size: 28px;
+  margin: 0;
+}
+
+/* Search container - full width */
+.search-container {
+  max-width: 900px;
+  margin: 0 auto 20px;
+}
+
+#searchInput {
+  width: 100%;
+  padding: 14px 20px;
+  font-size: 16px;
+  border: 2px solid #e9ecef;
+  border-radius: 8px;
+  background: white;
+  transition: border-color 0.2s, box-shadow 0.2s;
+  outline: none;
+}
+
+#searchInput:focus {
+  border-color: #3498db;
+  box-shadow: 0 0 0 3px rgba(52, 152, 219, 0.1);
+}
+
+#searchInput::placeholder {
+  color: #95a5a6;
+}
+
+.search-stats {
+  text-align: left;
+  margin-top: 10px;
+  font-size: 14px;
+  color: #7f8c8d;
+  margin-bottom: 4px;
+}
+
+.no-results {
+  text-align: center;
+  padding: 40px;
+  color: #7f8c8d;
+}
+
+.fetch-button {
+  margin-top: 20px;
+  padding: 12px 24px;
+  background: #3498db;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  font-size: 16px;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.fetch-button:hover {
+  background: #2980b9;
+}
+
+.fetch-button:active {
+  transform: scale(0.98);
+}
 
     #list {
       max-width: 900px;
@@ -65,6 +141,8 @@
     .vendor-name {
       font-size: 14px;
       color: #7f8c8d;
+      font-weight: 600;
+
     }
 
     .arrow {

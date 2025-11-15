@@ -1,3 +1,24 @@
+/*
+const { invoke } = window.__TAURI__.tauri;
+
+let greetInputEl;
+let greetMsgEl;
+
+async function greet() {
+  // Learn more about Tauri commands at https://tauri.app/v1/guides/features/command
+  greetMsgEl.textContent = await invoke("greet", { name: greetInputEl.value });
+}
+
+window.addEventListener("DOMContentLoaded", () => {
+  greetInputEl = document.querySelector("#greet-input");
+  greetMsgEl = document.querySelector("#greet-msg");
+  document.querySelector("#greet-form").addEventListener("submit", (e) => {
+    e.preventDefault();
+    greet();
+  });
+});
+*/
+
 // Store all data globally for filtering
 let allData = [];
 
@@ -97,7 +118,7 @@ function filterData(query) {
 
 function updateSearchStats(showing, total) {
   const stats = document.getElementById('searchStats');
-  if (stats) { // FIX 3: Check if element exists
+  if (stats) { 
     if (showing === total) {
       stats.textContent = `Showing all ${total} products`;
     } else {
@@ -109,12 +130,16 @@ function updateSearchStats(showing, total) {
 
 function renderList(data, query = '') {
   const list = document.getElementById("list");
-  list.innerHTML = ''; // IMPORTANT: Clear existing items
+  list.innerHTML = ''; 
 
-  // FIX 5: Show message when no results
+  
   if (data.length === 0) {
-    list.innerHTML = '<div style="text-align: center; padding: 40px; color: #7f8c8d;">No products found.</div>';
-    return;
+   list.innerHTML = `
+    <div class="no-results">
+      <div style="margin-bottom: 20px;">No products found matching your search.</div>
+      <button class="fetch-button" onclick="fetchNewData()">Fetch Software</button>
+    </div>
+  `;    return;
   }
 
   data.forEach((item, index) => {
@@ -123,7 +148,7 @@ function renderList(data, query = '') {
 
     const title = document.createElement("div");
     title.className = "title";
-    // FIX 6: Show both product and vendor with highlighting
+    
     title.innerHTML = `
        <div class="title-content">
     <div class="product-name">${highlightMatch(item.product, query)}</div>
@@ -136,17 +161,14 @@ function renderList(data, query = '') {
 
     const drawer = document.createElement("div");
     drawer.className = "drawer";
+    const hasAlternatives = item.alternatives && item.alternatives.length > 0;
     drawer.innerHTML = `
       <div class="metadata">
-        <div class="metadata-item">
-          <span class="metadata-label">SHA1:</span>
-          <span class="metadata-value">${item.sha1}</span>
-        </div>
-      </div>
 
-      <div class="section">
+        <div class="section">
         <div class="section-title">Description</div>
         <div class="section-content">No description available</div>
+        </div>
       </div>
 
       <div class="section">
@@ -197,8 +219,18 @@ function renderList(data, query = '') {
       </div>
 
       <div class="section">
-        <div class="section-title">Safer Alternatives</div>
-        <div class="alternatives">
+    <div class="section-title">Safer Alternatives</div>
+    <div class="alternatives">
+      ${hasAlternatives ? 
+        item.alternatives.map((alt, idx) => `
+          <div class="alternative-item">
+            <div class="alternative-name">${alt.name}</div>
+            <div class="alternative-rationale">${alt.rationale}</div>
+            <button class="fetch-button" onclick="fetchAlternative(${idx + 1}, '${item.product}')">Fetch Software</button>
+          </div>
+        `).join('') 
+        : 
+        `
           <div class="alternative-item">
             <div class="alternative-name">Alternative 1</div>
             <div class="alternative-rationale">No alternatives identified yet</div>
@@ -207,9 +239,11 @@ function renderList(data, query = '') {
             <div class="alternative-name">Alternative 2</div>
             <div class="alternative-rationale">No alternatives identified yet</div>
           </div>
-        </div>
-      </div>
-    `;
+        `
+      }
+    </div>
+  </div>
+`;
 
     title.addEventListener("click", () => {
       const open = drawer.style.display === "block";
@@ -223,10 +257,10 @@ function renderList(data, query = '') {
   });
 }
 
-// FIX 7: Wait for DOM to load before setting up listeners
+
 loadCSV();
 
-// Set up search input listener after DOM is ready
+
 const searchInput = document.getElementById('searchInput');
 if (searchInput) {
   searchInput.addEventListener('input', (e) => {
