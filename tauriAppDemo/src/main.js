@@ -187,7 +187,7 @@ function renderList(data, query = '') {
     drawer.className = "drawer";
     const hasAlternatives = item.alternatives && item.alternatives.length > 0;
     drawer.innerHTML = `
-      <div class="metadata">
+      <div class="metadata"> 
 
         <div class="section">
         <div class="section-title">Description</div>
