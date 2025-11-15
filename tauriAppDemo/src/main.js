@@ -46,6 +46,7 @@ async function fetchNewData(sw_name, productName) {
   }
 }*/
 
+
 async function loadCSV() {
   const response = await fetch("/assets/WithSecure_sample_data.csv");
   const text = await response.text();
@@ -62,9 +63,82 @@ async function loadCSV() {
   });
 
   allData = data; // FIX 1: Store data globally
+
+  await loadAnalysisData();
+
   renderList(data);
   updateSearchStats(data.length, data.length); // FIX 2: Initialize stats
 }
+
+async function loadAnalysisData() {
+  
+    const response = await fetch("/assets/dummy.csv");
+    const text = await response.text();
+    const rows = text.trim().split(/\n+/);
+    
+    
+    const headers = rows[0].split(',');
+    
+    const analysisData = rows.slice(1).map(line => {
+      const parts = line.match(/\".*?\"|[^,]+/g).map(v => v.replace(/^\"|\"$/g, ""));
+      
+      return {
+        name: parts[0],
+        description: parts[1],
+        clearance: parts[2] ,
+        vendorReputation: parts[3],
+        cveHistory: parts[4],
+        incidents: parts[5],
+        datahandlingCompliance: parts[6],
+        trustScore: parseInt(parts[7]) || 0,
+        confidenceRating: parseInt(parts[8]) || 0,
+        alternatives: parts[9] ? parts[9].split(';').map(alt => alt.trim()) : []
+      };
+    });
+
+    allData.forEach(item => {
+      const analysis = analysisData.find(a => 
+        a.name.toLowerCase() === item.product.toLowerCase() ||
+        item.product.toLowerCase().includes(a.name.toLowerCase()) ||
+        a.name.toLowerCase().includes(item.product.toLowerCase())
+      );
+
+      if (analysis) {
+        item.analysis = {
+          description: analysis.description,
+          clearance: analysis.clearance,
+          usage: `Software clearance status: ${analysis.clearance ? 'Approved' : 'Pending Review'}`,
+          vendorReputation: {
+            summary: analysis.vendorReputation,
+            score: analysis.trustScore
+          },
+          cveHistory: {
+            summary: analysis.cveHistory
+          },
+          incidents: {
+            summary: analysis.incidents
+          },
+          dataCompliance: {
+            summary: analysis.datahandlingCompliance,
+            gdpr: analysis.datahandlingCompliance.toLowerCase().includes('gdpr'),
+            soc2: analysis.datahandlingCompliance.toLowerCase().includes('soc'),
+            hipaa: analysis.datahandlingCompliance.toLowerCase().includes('hipaa')
+          },
+          trustScore: {
+            score: analysis.trustScore,
+            rationale: `${analysis.vendorReputation}. ${analysis.cveHistory}`,
+            confidence: analysis.confidenceRating
+          },
+          alternatives: analysis.alternatives.map((altName, idx) => ({
+            name: altName,
+            vendor: "Various",
+            rationale: `Alternative option for similar functionality`,
+            trustScore: analysis.trustScore - 5 + (idx * 2)
+          }))
+        };
+      }
+    });
+  }
 
 function fuzzySearch(query, text) {
   query = query.toLowerCase();
@@ -191,7 +265,7 @@ function renderList(data, query = '') {
 
         <div class="section">
         <div class="section-title">Description</div>
-        <div class="section-content">No description available</div>
+        <div class="section-content">${item.description}</div>
         </div>
       </div>
 

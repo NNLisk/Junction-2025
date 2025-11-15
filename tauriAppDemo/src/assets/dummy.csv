@@ -1,4 +1,4 @@
-name,description,clearance,vendor_reputation,cve_history,incidents,datahandling_and_compliance,trust_score,confidence_rating,alternatives
+company,name,sha1,description,clearance,vendor_reputation,cve_history,incidents,datahandling_and_compliance,trust_score,confidence_rating,alternatives
 Slack,"Enterprise messaging platform with strong compliance posture",true,"Well-established SaaS vendor with solid trust programs","Low–moderate CVE activity, mostly medium severity","No major recent breaches","SOC2 Type II, ISO 27001, GDPR-aligned DPA","82","90","Microsoft Teams; Google Chat"
 7-Zip,"Lightweight open-source file archiver",true,"Good reputation; widely trusted in infosec","Very few CVEs; mostly older and patched","No major security incidents","Insufficient public evidence","78","70","PeaZip; WinRAR"
 AnyDesk,"Remote desktop tool with fast global adoption",false,"Mixed reputation due to abuse reports","Several CVEs including high-severity ones","Used frequently in social engineering attacks","GDPR statement available; limited public compliance evidence","45","60","TeamViewer; Chrome Remote Desktop"
