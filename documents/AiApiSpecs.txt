@@ -26,62 +26,172 @@ optionally URL: string,
 - Reputable advisories/CERTS
 - CISA known exploited vulnerabilities catalog
 
-AI Prompt Idea:
+AI Prompt Code:
 
-"You are an expert security analyst and CISO advisor specializing in rapid software security assessments. Your role is to evaluate software products and provide actionable, source-grounded security intelligence.
+use async_openai::{
+    config::Config,
+    types::{
+        ChatCompletionRequestMessage, ChatCompletionRequestSystemMessageArgs,
+        ChatCompletionRequestUserMessageArgs, CreateChatCompletionRequestArgs,
+    },
+    Client,
+};
+use serde::{Deserialize, Serialize};
 
-    # Core Responsibilities
-    1. Gather information from TRUSTED sources only
-    2. Distinguish between vendor-stated claims and independent verification
-    3. Provide accurate CVE analysis with trend assessment
-    4. Evaluate compliance posture and data handling practices
-    5. Generate defensible trust scores with clear rationale
-    6. Suggest safer alternatives when appropriate
+// Response struct that matches what OpenAI returns
+#[derive(Debug, Serialize, Deserialize)]
+pub struct SoftwareAnalysis {
+    pub name: String,
+    pub clearance: bool,
+    pub description: String,
+    pub vendor_reputation: String,
+    pub cve_history: String,
+    pub incidents: String,
+    pub datahandling_and_compliance: String,
+    pub trust_score: i32,
+    pub confidence_rating: i32,
+    pub alternative: String,
+}
 
-    # Source Prioritization (in order)
-    **Tier 1 - Authoritative Security Sources:**
-    - PSIRT pages (Product Security Incident Response Team)
-    - CISA KEV (Known Exploited Vulnerabilities catalog)
-    - CERT/CSIRT advisories (e.g., US-CERT, NCSC, vendor CERTs)
-    - NVD/MITRE CVE databases with CVSS scores
+impl SoftwareAnalysis {
+    pub fn dummy(name: String) -> Self {
+        SoftwareAnalysis {
+            name: name.clone(),
+            clearance: true,
+            description: format!("This is a dummy analysis for {}", name),
+            vendor_reputation: "No data available - dummy response".to_string(),
+            cve_history: "No CVEs found - dummy response".to_string(),
+            incidents: "No incidents reported - dummy response".to_string(),
+            datahandling_and_compliance: "Unknown - dummy response".to_string(),
+            trust_score: 50,
+            confidence_rating: 0,
+            alternative: "N/A - dummy response".to_string(),
+        }
+    }
+}
 
-    **Tier 2 - Compliance & Attestations:**
-    - SOC 2 Type II reports (System and Organization Controls)
-    - ISO certifications (27001, 27017, 27018, 27701)
-    - FedRAMP authorization status
-    - PCI DSS compliance documentation
+pub struct OpenAIRequest {
+    pub sw_name: String,
+    pub sw_url: Option<String>,
+    pub priority_sources: Vec<String>,
+}
 
-    **Tier 3 - Vendor Documentation:**
-    - Official Terms of Service
-    - Data Processing Agreements (DPA)
-    - Privacy Policy with data residency details
-    - Security whitepapers and architecture docs
-    - Bug bounty program pages (HackerOne, Bugcrowd)
+impl OpenAIRequest {
+    pub fn new(sw_name: String) -> Self {
+        OpenAIRequest {
+            sw_name,
+            sw_url: None,
+            priority_sources: vec![],
+        }
+    }
 
-    **Tier 4 - Incident Intelligence:**
-    - Documented breach notifications
-    - Security incident disclosures
-    - Abuse database entries
-    - Regulatory enforcement actions
+    pub fn with_url(mut self, url: String) -> Self {
+        self.sw_url = Some(url);
+        self
+    }
+}
 
-    # Analysis Principles
-    - **Evidence-Based**: Every claim must be traceable to a source
-    - **Vendor vs Independent**: Always label whether information comes from the vendor or third parties
-    - **Insufficient Data Protocol**: When evidence is scarce, explicitly state "Insufficient public evidence" rather than speculating
-    - **Temporal Awareness**: Prioritize recent information (last 12-24 months) for CVE trends
-    - **Risk Context**: Consider the software classification when scoring (SaaS vs on-prem, data sensitivity, attack surface)
+// The real implementation
+pub async fn fetch_software_info(
+    request: &OpenAIRequest,
+    api_key: &str,
+) -> Result<SoftwareAnalysis, String> {
+    // Configure OpenAI client
+    let config = Config::new().with_api_key(api_key.to_string());
+    let client = Client::with_config(config);
 
-    # Trust Score Calibration (0-100)
-    - **80-100**: Strong security program, current certifications, minimal critical CVEs, transparent disclosure
-    - **60-79**: Good security practices, some certifications, moderate CVE history, acceptable controls
-    - **40-59**: Basic security measures, limited transparency, concerning CVE patterns or incident history
-    - **20-39**: Poor security posture, significant vulnerabilities, compliance gaps, or major incidents
-    - **0-19**: Critical security failures, active exploitation, regulatory violations, or insufficient evidence
+    // System prompt: your CISO/security-assessor role
+    let system_prompt = r#"
+You are an expert security analyst and CISO advisor specializing in rapid software security assessments.
+Your role is to evaluate software products and provide actionable, source-grounded security intelligence.
 
-    # Output Requirements
-    - Concise, executive-friendly language
-    - Citations for all factual claims
-    - Clear confidence ratings
-    - Actionable recommendations
-    - Semicolon-separated format for programmatic consumption
-    - Single-line output with NO line breaks within fields
+Core Responsibilities:
+1. Gather information from TRUSTED sources only
+2. Distinguish between vendor-stated claims and independent verification
+3. Provide accurate CVE analysis with trend assessment
+4. Evaluate compliance posture and data handling practices
+5. Generate defensible trust scores with clear rationale
+6. Suggest safer alternatives when appropriate
+
+Source Prioritization (in order):
+- PSIRT / Vendor Security Page
+- CISA KEV (Known Exploited Vulnerabilities catalog)
+- CERT/CSIRT advisories (e.g., US-CERT, NCSC, vendor CERTs)
+- NVD/MITRE CVE databases with CVSS scores
+- SOC 2 Type II reports and ISO 27001+ certifications
+- Terms of Service, DPA, Privacy Policy, security whitepapers
+- Public breach notifications and incident disclosures
+
+Analysis principles:
+- Evidence-based only
+- If evidence is missing, say so explicitly in the relevant fields
+- Prefer information from the last 12–24 months for trends
+
+You MUST output ONLY a single JSON object with this exact structure (no markdown, no extra text):
+
+{
+  "name": string,
+  "clearance": boolean,
+  "description": string,
+  "vendor_reputation": string,
+  "cve_history": string,
+  "incidents": string,
+  "datahandling_and_compliance": string,
+  "trust_score": integer (0-100),
+  "confidence_rating": integer (0-100),
+  "alternative": string
+}
+
+Do not include comments. Do not wrap in backticks. JSON only.
+"#;
+
+    // User prompt: software name + optional URL
+    let user_prompt = format!(
+        "Assess the security posture of the following software:\n\nName: {}\nURL: {}\n\nIf URL is 'None', infer the vendor and product from the name alone.",
+        request.sw_name,
+        request.sw_url.clone().unwrap_or_else(|| "None".to_string())
+    );
+
+    // Build messages
+    let system_message: ChatCompletionRequestMessage =
+        ChatCompletionRequestSystemMessageArgs::default()
+            .content(system_prompt)
+            .build()
+            .map_err(|e| e.to_string())?
+            .into();
+
+    let user_message: ChatCompletionRequestMessage =
+        ChatCompletionRequestUserMessageArgs::default()
+            .content(user_prompt)
+            .build()
+            .map_err(|e| e.to_string())?
+            .into();
+
+    // Build chat completion request
+    let chat_request = CreateChatCompletionRequestArgs::default()
+        .model("gpt-4.1-mini") // or "gpt-4.1"
+        .messages(vec![system_message, user_message])
+        .temperature(0.0)
+        .build()
+        .map_err(|e| e.to_string())?;
+
+    // Call OpenAI
+    let response = client
+        .chat()
+        .create(chat_request)
+        .await
+        .map_err(|e| e.to_string())?;
+
+    // Extract content (the JSON string)
+    let content = response
+        .choices
+        .get(0)
+        .and_then(|c| c.message.content.clone())
+        .ok_or_else(|| "No content returned from OpenAI".to_string())?;
+
+    // Parse JSON into SoftwareAnalysis
+    let analysis: SoftwareAnalysis =
+        serde_json::from_str(&content).map_err(|e| format!("JSON parse error: {e}\nRaw: {content}"))?;
+
+    Ok(analysis)
+}
