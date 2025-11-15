@@ -1,10 +1,19 @@
 use rusqlite::{params, Connection, Result};
 use std::collections::HashMap;
+use serde::{Serialize, Deserialize};
 
-#[derive(Debug)]
-struct software{
-    name: String,
-    color: String,
+#[derive(Debug, Serialize, Deserialize)]
+pub struct Software{
+    pub name: String,
+    pub clearance: Option<bool>,
+    pub description: Option<String>,
+    pub vendor_reputation: Option<String>,
+    pub cve_history: Option<String>,
+    pub incidents: Option<String>,
+    pub datahandling_and_compliance: Option<String>,
+    pub trust_score: Option<i32>,
+    pub confidence_rating: Option<i32>,
+    pub alternative: Option<String>,
 }
 
 pub fn initialize_database() -> Result<Connection> {
@@ -28,8 +37,38 @@ pub fn initialize_database() -> Result<Connection> {
     Ok(conn)
 }
 
-pub fn load_all() -> Result<Vec<Entry>, String> {
+pub fn load_all(conn: &Connection) -> Result<Vec<Software>, String> {
     get_all_entries(&conn).map_err(|e| e.to_string())
 }
 
+fn get_all_entries(conn: &Connection) -> Result<Vec<Software>> {
+    let mut stmt = conn.prepare(
+        "SELECT name, clearance, description, vendor_reputation, cve_history, 
+                incidents, datahandling_and_compliance, trust_score, 
+                confidence_rating, alternative 
+         FROM software"
+    )?;
+    
+    let software_iter = stmt.query_map([], |row| {
+        Ok(Software {
+            name: row.get(0)?,
+            clearance: row.get(1)?,
+            description: row.get(2)?,
+            vendor_reputation: row.get(3)?,
+            cve_history: row.get(4)?,
+            incidents: row.get(5)?,
+            datahandling_and_compliance: row.get(6)?,
+            trust_score: row.get(7)?,
+            confidence_rating: row.get(8)?,
+            alternative: row.get(9)?,
+        })
+    })?;
+    
+    let mut softwares = Vec::new();
+    for software in software_iter {
+        softwares.push(software?);
+    }
+    
+    Ok(softwares)
+}
 
