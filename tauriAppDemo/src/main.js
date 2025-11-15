@@ -1,4 +1,4 @@
-/*async function loadCSV() {
+async function loadCSV() {
   
   const response = await fetch("/assets/WithSecure_sample_data.csv");
   const text = await response.text();
@@ -16,39 +16,114 @@
   });
 
   renderList(data);
-}*/
-function loadSampleData() {
-      const sampleData = [
-        {
-          company: "Microsoft Corporation",
-          product: "Microsoft Office 365",
-          sha1: "a1b2c3d4e5f6g7h8i9j0k1l2m3n4o5p6q7r8s9t0"
-        },
-        {
-          company: "Adobe Inc.",
-          product: "Adobe Acrobat Reader",
-          sha1: "b2c3d4e5f6g7h8i9j0k1l2m3n4o5p6q7r8s9t0u1"
-        },
-        {
-          company: "Google LLC",
-          product: "Google Chrome Browser",
-          sha1: "c3d4e5f6g7h8i9j0k1l2m3n4o5p6q7r8s9t0u1v2"
-        },
-        {
-          company: "Slack Technologies",
-          product: "Slack Desktop",
-          sha1: "d4e5f6g7h8i9j0k1l2m3n4o5p6q7r8s9t0u1v2w3"
-        },
-        {
-          company: "Zoom Video Communications",
-          product: "Zoom Client",
-          sha1: "e5f6g7h8i9j0k1l2m3n4o5p6q7r8s9t0u1v2w3x4"
-        }
-      ];
+}
 
-      renderList(sampleData);
+// Store all data globally for filtering
+let allData = [];
+
+
+function fuzzySearch(query, text) {
+  query = query.toLowerCase();
+  text = text.toLowerCase();
+  
+
+  if (text.includes(query)) {
+    return { match: true, score: 100 };
+  }
+  
+  // Fuzzy matching - check if all characters appear in order
+  let queryIndex = 0;
+  let matchedIndices = [];
+  
+  for (let i = 0; i < text.length && queryIndex < query.length; i++) {
+    if (text[i] === query[queryIndex]) {
+      matchedIndices.push(i);
+      queryIndex++;
     }
+  }
+  
+  if (queryIndex === query.length) {
+    // Calculate score based on how close together the matches are
+    let score = 50;
+    if (matchedIndices.length > 1) {
+      const avgDistance = matchedIndices[matchedIndices.length - 1] / matchedIndices.length;
+      score = Math.max(10, 50 - avgDistance);
+    }
+    return { match: true, score: score };
+  }
+  
+  return { match: false, score: 0 };
+}
 
+// Highlight matched characters
+function highlightMatch(text, query) {
+  if (!query) return text;
+  
+  const lowerText = text.toLowerCase();
+  const lowerQuery = query.toLowerCase();
+  
+  
+  const index = lowerText.indexOf(lowerQuery);
+  if (index !== -1) {
+    return text.substring(0, index) + 
+           '<span class="highlight">' + 
+           text.substring(index, index + query.length) + 
+           '</span>' + 
+           text.substring(index + query.length);
+  }
+  
+  return text;
+}
+
+// Filter and render based on search
+function filterData(query) {
+  if (!query.trim()) {
+    renderList(allData);
+    updateSearchStats(allData.length, allData.length);
+    return;
+  }
+
+  const results = allData
+    .map(item => {
+      const productMatch = fuzzySearch(query, item.product);
+      const companyMatch = fuzzySearch(query, item.company);
+      const bestMatch = productMatch.score > companyMatch.score ? productMatch : companyMatch;
+      
+      return {
+        ...item,
+        matchScore: bestMatch.score,
+        matches: bestMatch.match
+      };
+    })
+    .filter(item => item.matches)
+    .sort((a, b) => b.matchScore - a.matchScore);
+
+  renderList(results, query);
+  updateSearchStats(results.length, allData.length);
+}
+
+function updateSearchStats(showing, total) {
+  const stats = document.getElementById('searchStats');
+  if (showing === total) {
+    stats.textContent = `Showing all ${total} products`;
+  } else {
+    stats.textContent = `Showing ${showing} of ${total} products`;
+  }
+}
+
+
+const searchInput = document.getElementById('searchInput');
+searchInput.addEventListener('input', (e) => {
+  filterData(e.target.value);
+});
+
+
+function loadSampleData() {
+  const sampleData = [ /* your data */ ];
+  allData = sampleData; // IMPORTANT: Store globally
+  renderList(sampleData);
+  updateSearchStats(sampleData.length, sampleData.length);
+}
 
 function renderList(data) {
   const list = document.getElementById("list");
@@ -149,5 +224,6 @@ function renderList(data) {
     list.appendChild(container);
   });
 }
+
 
 loadCSV();
