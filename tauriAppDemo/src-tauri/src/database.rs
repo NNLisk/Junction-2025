@@ -1,6 +1,7 @@
 use rusqlite::{params, Connection, Result};
 use std::collections::HashMap;
 use serde::{Serialize, Deserialize};
+use std::path::Path;
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct Software{
@@ -37,9 +38,28 @@ pub fn initialize_database() -> Result<Connection> {
     Ok(conn)
 }
 
-pub fn load_all(conn: &Connection) -> Result<Vec<Software>, String> {
-    get_all_entries(&conn).map_err(|e| e.to_string())
+pub fn load_all(conn: &Connection, csv_path: &str) -> Result<Vec<Software>, String> {
+        let softwares = get_all_entries(&conn).map_err(|e| e.to_string())?;
+        
+        if std::path::Path::new(csv_path).exists() {
+            std::fs::remove_file(csv_path)
+                .map_err(|e| format!("Failed to delete old CSV: {}", e))?;
+        }
+
+        let mut writer = csv::Writer::from_path(csv_path)
+            .map_err(|e| format!("Failed to create CSV: {}", e))?;
+
+        for software in &softwares {
+            writer.serialize(software)
+                .map_err(|e| format!("Failed to write to CSV: {}", e))?;    
+        }
+
+        writer.flush()
+            .map_err(|e| format!("Failed to save CSV: {}", e))?;
+        Ok(softwares)
+
 }
+
 
 fn get_all_entries(conn: &Connection) -> Result<Vec<Software>> {
     let mut stmt = conn.prepare(
@@ -72,7 +92,7 @@ fn get_all_entries(conn: &Connection) -> Result<Vec<Software>> {
     Ok(softwares)
 }
 
-fn addToDatabase(conn: &Connection, software: &Software) -> Result<()> {
+pub fn addToDatabase(conn: &Connection, software: &Software) -> Result<()> {
     conn.execute(
         "INSERT INTO software (name, clearance, description, vendor_reputation, 
                                cve_history, incidents, datahandling_and_compliance, 

@@ -7,6 +7,7 @@ use tauri::State;
 
 pub struct DbConnection(pub Mutex<Connection>);
 pub struct ApiKey(pub Mutex<String>);
+pub struct CsvPath(pub Mutex<String>);
 
 
 
@@ -17,10 +18,20 @@ pub fn run() {
         .expect("Failed to connect to a database");
 
     let api_key = "apikey".to_string();
+    
+    let path = std::env::current_dir()
+        .expect("Failed to get current dir")
+        .join("src")
+        .join("assets")
+        .join("software_data.csv")
+        .to_string_lossy()
+        .to_string();
+    
 
     tauri::Builder::default()
         .manage(DbConnection(Mutex::new(conn)))
         .manage(ApiKey(Mutex::new(api_key)))
+        .manage(CsvPath(Mutex::new(path)))
         .plugin(tauri_plugin_opener::init())
         .invoke_handler(tauri::generate_handler![
             load_data,
@@ -33,9 +44,10 @@ pub fn run() {
 }
 
 #[tauri::command]
-fn load_data(db: State<DbConnection>) -> Result<Vec<database::Software>, String> {
+fn load_data(db: State<DbConnection>, p: State<CsvPath>) -> Result<Vec<database::Software>, String> {
     let conn = db.0.lock().expect("Failed to acquire database lock");
-    database::load_all(&conn)
+    let csvpath = p.0.lock().expect("Failed to acquire CSV path lock");
+    database::load_all(&conn, &csvpath)
 }
 
 #[tauri::command]
@@ -53,7 +65,7 @@ async fn request_software_info(
     let key = {
         let key_guard = api_key.0.lock().expect("Failed to acquire API key lock");
         key_guard.clone()  // Clone the String
-    };  
+    };
     let response = open_ai_manager::fetch_software_info(&request, &key).await?;
 
     let software = database::Software {
@@ -68,6 +80,9 @@ async fn request_software_info(
         confidence_rating: Some(response.confidence_rating),
         alternative: Some(response.alternative),
     };
+
+    let conn = db.0.lock().expect("Failed to acquire database lock");
+    database::addToDatabase(&conn, &software);
 
     Ok(software)
 }
