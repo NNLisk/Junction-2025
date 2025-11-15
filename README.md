@@ -28,15 +28,22 @@ Product description + usage
 
 - Vendor reputation
 - CVE history + trends
-- CISA KEV status
 - Incidents / abuse signals
 - Data handling + compliance
 - Deployment + admin controls
 - 0–100 trust/risk score with rationale
 - Confidence rating
-
 - Suggest 1–2 safer alternatives with short rationales.
 
-- Use a lightweight local cache
+AI to lookup high signal sources like
 
+- PSRIT
+- Terms of service/data processing agreement
+- Systems and organization controls type II
+- ISO attestations
+- Reputable advisories/CERTS
+- CISA known exploited vulnerabilities catalog
+
+
+- Use a lightweight local cache
 Can be CLI but web page would be a bonus. 
