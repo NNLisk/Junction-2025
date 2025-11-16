@@ -1,30 +1,37 @@
 # Junction 2025 | Mukkulan Kauneukset
 
-## Team
-+ Jussi Grönroos
-+ Iikka Harjamäki
-+ Niko Lausto
-+ Emilija Kurtinaityte
-+ Jesse Mahkonen
+
+
+## The problem
+
+The security teams and CISO (Chief information Security officer) are constantly asked to approve new tools they have never seen beforeThey need accurate, concise, and source-grounded snapshots of a product’s security posture, fast. This challenge asks participants to build a GenAI-powered assessor that fetches reliable signals from the web and synthesizes them into a decision-ready brief. Help us move security from reactive firefighting to proactive enablement.
 
 ## Project overview
 
+Our project is a software security assessor that uses OpenAI API to request security data and visualize it for With Secure's CISO. The desktop application is a dynamic tool that enables the CISO to proactively prevent security risks by vetting the Software used by the company developers before they install and use them.
+
+Idea is that this would be automated with having an application on the developers computers that would keep track of already accepted software requests a "green light" from the CISO before they install software.
 ## Tech stack
 
-## Appendix
+We chose to use Tauri framework, to write the front end in vanilla javascript while keeping the backend in Rust-language to provide efficient access to our database.
 
+## Feature list
 
++ OpenAI web search API calls providing security information
++ Efficient lightweight SQLite database
+    + Maintained by Rust Backend
+    + Asynchronous
++ ALphabethically sorted frontend displaying the software with fuzzy search
 
-## Ideation
+## Data flow
 
-Goal is to build an AI tool that turns a name or URL into a CISO ready description and a security briefing with sources. To help CISOs approve new tools they’ve never seen before.
++ Input: Product name or URL.
+    + If software is found in cache, displays information
+    + If not, backend makes an OpenAI API request
++ Output
+    + A fuzzy searchable list of expandable software security information
 
-1. Input: Product name or URL.
-2. Resolves the correct product and who makes it.
-3. Classifies the software into categories.
-4. Produces a concise security summary with sources.
-
-Product description + usage
+Security information provided for an app
 
 - Vendor reputation
 - CVE history + trends
@@ -35,6 +42,9 @@ Product description + usage
 - Confidence rating
 - Suggest 1–2 safer alternatives with short rationales.
 
-AI to lookup high signal sources like
-
-Can be CLI but web page would be a bonus.
+## Team
++ Jussi Grönroos
++ Iikka Harjamäki
++ Niko Lausto
++ Emilija Kurtinaityte
++ Jesse Mahkonen
